@@ -20,7 +20,7 @@ def volume_avg(stockID):
         avg_volume = hist["Volume"].mean()/1000
     return str(avg_volume)
 #預估成交量
-def estimate_volume_optimized(hour, min, vol):
+def estimate_volume(hour, min, vol):
     '''
     Parameters
     ----------
