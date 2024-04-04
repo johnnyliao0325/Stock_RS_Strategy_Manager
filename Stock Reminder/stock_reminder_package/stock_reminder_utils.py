@@ -21,22 +21,35 @@ def volume_avg(stockID):
     return str(avg_volume)
 #預估成交量
 def estimate_volume_optimized(hour, min, vol):
-
+    '''
+    Parameters
+    ----------
+    hour : int
+        現在時間的小時
+    min : int
+        現在時間的分鐘
+    vol : int
+        現在時間的成交量
+    Returns
+    -------
+    str
+        預估成交量
+    '''
+    # 定義時間區間、分鐘區間、預估倍數
     hour_range = [9, 10, 11, 12, 13]
     min_range = [0, 15, 30, 45]
     estimate_num = [8, 5, 4, 3, 2.5, 2.2, 2, 1.8, 1.7, 1.6, 1.5, 1.45, 1.38, 1.32, 1.25, 1.17, 1.1, 1]
-
-
+    # 計算預估成交量
     if hour not in hour_range:
         return str(vol * estimate_num[-1])
     hour_index = hour_range.index(hour)
     min_index = min // 15
     if min_index >= len(min_range): 
         min_index = len(min_range) - 1
-
+    # 透過時間區間、分鐘區間計算預估成交量
     total_index = hour_index * len(min_range) + min_index
     total_index = min(total_index, len(estimate_num) - 1)
-
+    
     return str(vol * estimate_num[total_index])
 # 倉位計算
 def position(all_money,confidence,number_of_stocks,price,stop_loss):
