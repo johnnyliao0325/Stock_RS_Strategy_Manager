@@ -20,49 +20,24 @@ def volume_avg(stockID):
         avg_volume = hist["Volume"].mean()/1000
     return str(avg_volume)
 #預估成交量
-def estimate_volume(hour, min, vol):
-    hour_range = [9,10,11,12,13]
-    min_range = [0,15,30,45]
-    estimate_num = [8,5,4,3,2.5,2.2,2,1.8,1.7,1.6,1.5,1.45,1.38,1.32,1.25,1.17,1.1,1]
-    if (hour_range[0], min_range[0]) <= (hour, min) < (hour_range[0], min_range[1]):
-        vol = vol * estimate_num[0]
-    elif (hour_range[0], min_range[1]) <= (hour, min) < (hour_range[0], min_range[2]):
-        vol = vol * estimate_num[1]
-    elif (hour_range[0], min_range[2]) <= (hour, min) < (hour_range[0], min_range[3]):
-        vol = vol * estimate_num[2]
-    elif (hour_range[0], min_range[3]) <= (hour, min) < (hour_range[1], min_range[0]):
-        vol = vol * estimate_num[3]
-    elif (hour_range[1], min_range[0]) <= (hour, min) < (hour_range[1], min_range[1]):
-        vol = vol * estimate_num[4]
-    elif (hour_range[1], min_range[1]) <= (hour, min) < (hour_range[1], min_range[2]):
-        vol = vol * estimate_num[5]
-    elif (hour_range[1], min_range[2]) <= (hour, min) < (hour_range[1], min_range[3]):
-        vol = vol * estimate_num[6]
-    elif (hour_range[1], min_range[3]) <= (hour, min) < (hour_range[2], min_range[0]):
-        vol = vol * estimate_num[7]
-    elif (hour_range[2], min_range[0]) <= (hour, min) < (hour_range[2], min_range[1]):
-        vol = vol * estimate_num[8]
-    elif (hour_range[2], min_range[1]) <= (hour, min) < (hour_range[2], min_range[2]):
-        vol = vol * estimate_num[9]
-    elif (hour_range[2], min_range[2]) <= (hour, min) < (hour_range[2], min_range[3]):
-        vol = vol * estimate_num[10]
-    elif (hour_range[2], min_range[3]) <= (hour, min) < (hour_range[3], min_range[0]):
-        vol = vol * estimate_num[11]
-    elif (hour_range[3], min_range[0]) <= (hour, min) < (hour_range[3], min_range[1]):
-        vol = vol * estimate_num[12]
-    elif (hour_range[3], min_range[1]) <= (hour, min) < (hour_range[3], min_range[2]):
-        vol = vol * estimate_num[13]
-    elif (hour_range[3], min_range[2]) <= (hour, min) < (hour_range[3], min_range[3]):
-        vol = vol * estimate_num[14]
-    elif (hour_range[3], min_range[3]) <= (hour, min) < (hour_range[4], min_range[0]):
-        vol = vol * estimate_num[15]
-    elif (hour_range[4], min_range[0]) <= (hour, min) < (hour_range[4], min_range[1]):
-        vol = vol * estimate_num[16]
-    elif (hour_range[4], min_range[1]) <= (hour, min) < (hour_range[4], min_range[2]):
-        vol = vol * estimate_num[17]
-    else:
-        vol = vol * estimate_num[17]
-    return(str(vol))
+def estimate_volume_optimized(hour, min, vol):
+
+    hour_range = [9, 10, 11, 12, 13]
+    min_range = [0, 15, 30, 45]
+    estimate_num = [8, 5, 4, 3, 2.5, 2.2, 2, 1.8, 1.7, 1.6, 1.5, 1.45, 1.38, 1.32, 1.25, 1.17, 1.1, 1]
+
+
+    if hour not in hour_range:
+        return str(vol * estimate_num[-1])
+    hour_index = hour_range.index(hour)
+    min_index = min // 15
+    if min_index >= len(min_range): 
+        min_index = len(min_range) - 1
+
+    total_index = hour_index * len(min_range) + min_index
+    total_index = min(total_index, len(estimate_num) - 1)
+
+    return str(vol * estimate_num[total_index])
 # 倉位計算
 def position(all_money,confidence,number_of_stocks,price,stop_loss):
     ## 總投資金額
