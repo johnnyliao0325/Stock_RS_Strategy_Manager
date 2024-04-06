@@ -1,2 +1,4 @@
 *.xlsx
 *.csv
+## Ignore txt files in \Stock_Data_Collector\tradingview
+\Stock_Data_Collector\tradingview\*.txt
