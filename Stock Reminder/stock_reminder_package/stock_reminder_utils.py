@@ -20,7 +20,7 @@ def volume_avg(stockID):
         avg_volume = hist["Volume"].mean()/1000
     return str(avg_volume)
 #預估成交量
-def estimate_volume(hour, min, vol):
+def estimate_volume(hour, minutes, vol):
     '''
     Parameters
     ----------
@@ -43,13 +43,12 @@ def estimate_volume(hour, min, vol):
     if hour not in hour_range:
         return str(vol * estimate_num[-1])
     hour_index = hour_range.index(hour)
-    min_index = min // 15
+    min_index = minutes // 15
     if min_index >= len(min_range): 
         min_index = len(min_range) - 1
     # 透過時間區間、分鐘區間計算預估成交量
     total_index = hour_index * len(min_range) + min_index
     total_index = min(total_index, len(estimate_num) - 1)
-    
     return str(vol * estimate_num[total_index])
 # 倉位計算
 def position(all_money,confidence,number_of_stocks,price,stop_loss):
