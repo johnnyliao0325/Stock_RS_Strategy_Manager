@@ -38,16 +38,18 @@ if str(day).split(' ')[0] in HOLIDAY:
     line_notify(f'{day}放假不執行stocknotify.py', TOKEN_FOR_NOTIFY, notify_ornot)
     sys.exit()
 # 總資金大小
-johnny_allmoney = 1100000
+johnny_allmoney = 1300000
 jack_allmoney = 100000
 # 曝險大小，同時持有總資金幾%部位
-risk = 65
+risk = 50
 # 最大部位總資金幾%
 maxposition = 17 
 johnny_maxposition = johnny_allmoney * maxposition / 100
 jack_maxposition = jack_allmoney * maxposition / 100
 # 自動下載ChromeDriver
 # print(ChromeDriverManager().install())
+chrome_path = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+# service = ChromeService(executable_path=ChromeDriverManager(path=chrome_path).install())
 service = ChromeService(executable_path=ChromeDriverManager().install())
 # 關閉通知提醒
 chrome_options = webdriver.ChromeOptions()
@@ -56,32 +58,23 @@ chrome_options.add_experimental_option("prefs",prefs)
 # 開啟瀏覽器
 driver = webdriver.Chrome(service=service, options=chrome_options)
 # 持有股票
-stop_loss_stockID = '2313 2439 1618'.split(' ')
+stop_loss_stockID = '0000'.split(' ')
 # 持有股票 note
-note_text1 = ['停利:89 15%出0.5， 96.5全出。\n停損:碰到停損出一半，剩下看收盤停損。',
-              '停利:138 15%全出。\n停損:碰到停損出一半，剩下看收盤停損。',
-              '停利:20% 43.95全出。\n停損:碰到停損出一半，剩下看收盤停損。']
+note_text1 = ['停利:15% 475全出。\n停損:390.5，碰到停損全出。']
 # 持有股票的停利點
-get_profit_price = [89, 138, 43.95]
+get_profit_price = [475]
 # 持有股票的停損點
-stop_loss_price = [72.8, 111, 34.25]
+stop_loss_price = [390.5]
 
 df1 = pd.DataFrame({'stockID':stop_loss_stockID, 'stop_loss_price':stop_loss_price, 'get_profit_price':get_profit_price, 'note':note_text1})
 # 準備買入股票
-stockID_list = '2204 6122 1524 6535 6806 3050 4770 6715 6442'.split(' ')
-note_text2 = ['A，小時線收破134買0.2，日線收破134買0.2，日線收破137買0.1(1522已經買0.2)',
-              'B，小時線收破71.6買0.2，日線收破71.6買0.3，拉回可以買0.1再突破買0.1，剩下等突破77.3買。',
-              'B，目前倉位0.2，日線收破37.7買0.1，小時線收破38.3買0.1，日線收破38.3買0.1，，剩下等突破拉回買。',
-              'B，小時線收破193買0.1，小時線收破197.5買0.1，日線收破197.5買0.2，剩下等拉回買或買其他生技醫療。',
-              'B，小時線收破154買0.2，日線收破154買0.2，小時線破160買0.1，日線收破160買0.1，日線收破164.5買0.1，剩下等突破拉回買。',
-              'B，小時線收破24買0.3，日線收破24買0.3，剩下等VCP或拉回買。',
-              'B，小時線收破433買0.2，日線收破433買0.4，小時線收破442買0.1，日線收破442買0.2，日線收破450買0.1。',
-              'B，小時收破200買0.2，日線收破200買0.2。',
-              'B，小時收破145買0.2，日線收破145買0.2。']
+stockID_list = '2603 1477'.split(' ')
+note_text2 = ['B，小時線收破182買0.1，小時線收破183.5買0.3，日線收破183.5買0.2，剩下0.4等VCPB。',
+              'A，小時線收破393買0.1，小時線收破395.5買0.2，小時線收破400買0.1，日線收破395.5買0.1，日線收破400買0.3，剩下0.2等拉回買。']
 # 買入點 
-buy_price_list = [134, 71.6, 37.7, 193, 154, 24, 433, 200, 145]
+buy_price_list = [182, 393]
 # 準備買入股票的停損點
-newstock_stop_loss = [124.5, 67.8, 36.1, 180, 143.5, 22.35, 416, 187, 136]
+newstock_stop_loss = [172, 377]
 # 準備買入股票 note
 
 df2 = pd.DataFrame({'stockID':stockID_list, 'buy_price':buy_price_list, 'stop_loss_price':newstock_stop_loss, 'note':note_text2})

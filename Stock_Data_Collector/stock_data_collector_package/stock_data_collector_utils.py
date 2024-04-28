@@ -453,8 +453,8 @@ def template(allstock:pd.DataFrame, allstock_info:pd.DataFrame):
             #All Template
             allstock.loc[id, 'T5'] = all(allstock.loc[id, ['RS 20rate>85', 'RS 250rate>55', 'RS 250rate<75', 'year low sort', 'year high sort', 'Volume 50MA>150k']])
             allstock.loc[id, 'T5-2'] = all(allstock.loc[id, ['RS EMA20rate>80', 'RS EMA250rate>60', 'RS EMA250rate<80', 'year low sort', 'year high sort', 'Volume 50MA>150k']])
-            allstock.loc[id, 'T6'] = all(allstock.loc[id, ['RS EMA250rate>80', 'RS EMA20rate>80', 'RS EMA20rate<99', 'Volume 50MA>250k']])
-            allstock.loc[id, 'T11'] = all(allstock.loc[id, ['RS EMA250rate>75','RS 20EMA is 10MAX','RS EMA20rate<99','Volume 50MA>250k','price>95%50MA']])
+            allstock.loc[id, 'T6'] = all(allstock.loc[id, ['RS EMA250rate>80', 'RS EMA20rate>80', 'Volume 50MA>250k']])
+            allstock.loc[id, 'T11'] = all(allstock.loc[id, ['RS EMA250rate>75','RS 20EMA is 10MAX','Volume 50MA>250k','price>95%50MA']])
             allstock.loc[id, 'TM'] = all(allstock.loc[id, ['Price>150MA', 'Price>200MA', 'year high sort', 'year low sort', '200MA trending up 60d', 'RS 250rate>80', 'Volume 50MA>150k']])
         except Exception as e:
             pass

@@ -135,14 +135,14 @@ for i in [0]:
                                             , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50'
                                             ,'RS 250EMA is 10MAX','RS 50EMA is 10MAX','RS 20EMA is 10MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM'
                                             , 'Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', '150MA>200MA','year high sort', 'year low sort'
-                                            , '200MA trending up 60d', 'Volume 50MA>100k', 'Volume 50MA>250k']]
+                                            , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']]
         
         column_name = ['Name', 'Adj Close', 'busness volume(億)', 'Volume 50MA(張)', 'business volume 50MA(百萬)', '產業別'
                 , 'ES250rate', 'ES50rate', 'ES20rate', 'S250rate', 'S50rate', 'S20rate'
                 , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50'
                 ,'ES250 is 10D MAX','ES50 is 10D MAX','ES20 is 10D MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM'
                 , 'Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', '150MA>200MA','year high sort', 'year low sort'
-                , '200MA trending up 60d', 'Volume 50MA>100k', 'Volume 50MA>250k']
+                , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']
 
         apexstock.columns = column_name
         apexstock = apexstock.dropna()
@@ -158,7 +158,7 @@ for i in [0]:
                                             , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50'
                                             ,'RS 250EMA is 10MAX','RS 50EMA is 10MAX','RS 20EMA is 10MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM'
                                             , 'Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', '150MA>200MA','year high sort', 'year low sort'
-                                            , '200MA trending up 60d', 'Volume 50MA>100k', 'Volume 50MA>250k']]
+                                            , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']]
         # apexstock2[['RS 250rate', 'RS 50rate', 'RS 20rate','RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']] = apexstock2[['RS 250rate', 'RS 50rate', 'RS 20rate','RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']].astype(float).round(0)
         apexstock2.columns = column_name
         apexstock2 = apexstock2.dropna()
@@ -175,7 +175,7 @@ for i in [0]:
                                             , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50'
                                             ,'RS 250EMA is 10MAX','RS 50EMA is 10MAX','RS 20EMA is 10MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM'
                                             , 'Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', '150MA>200MA','year high sort', 'year low sort'
-                                            , '200MA trending up 60d', 'Volume 50MA>100k', 'Volume 50MA>250k']]
+                                            , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']]
         # allstock[['RS 250rate', 'RS 50rate', 'RS 20rate','RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']] = allstock[['RS 250rate', 'RS 50rate', 'RS 20rate','RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']].astype(float).round(0)
         allstock.columns = column_name
         allstock = allstock.dropna()
