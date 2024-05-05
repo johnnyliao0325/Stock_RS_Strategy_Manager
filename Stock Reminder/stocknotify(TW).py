@@ -38,10 +38,10 @@ if str(day).split(' ')[0] in HOLIDAY:
     line_notify(f'{day}放假不執行stocknotify.py', TOKEN_FOR_NOTIFY, notify_ornot)
     sys.exit()
 # 總資金大小
-johnny_allmoney = 1300000
+johnny_allmoney = 1800000
 jack_allmoney = 100000
 # 曝險大小，同時持有總資金幾%部位
-risk = 50
+risk = 30
 # 最大部位總資金幾%
 maxposition = 17 
 johnny_maxposition = johnny_allmoney * maxposition / 100
@@ -58,23 +58,29 @@ chrome_options.add_experimental_option("prefs",prefs)
 # 開啟瀏覽器
 driver = webdriver.Chrome(service=service, options=chrome_options)
 # 持有股票
-stop_loss_stockID = '0000'.split(' ')
+stop_loss_stockID = '1477 2603 2317 3010'.split(' ')
 # 持有股票 note
-note_text1 = ['停利:15% 475全出。\n停損:390.5，碰到停損全出。']
+note_text1 = ['停利:15% 460全出。\n停損:382，碰到停損全出。',
+              '停利:15% 215全出。\n停損:173.5，碰到停損全出。',
+              '停利:20% 192全出。\n停損:151，碰到停損全出。',
+              '停利:15% 148全出。\n停損:120，碰到停損全出。']
 # 持有股票的停利點
-get_profit_price = [475]
+get_profit_price = [460, 215, 192, 148]
 # 持有股票的停損點
-stop_loss_price = [390.5]
+stop_loss_price = [382, 173.5, 151, 120]
 
 df1 = pd.DataFrame({'stockID':stop_loss_stockID, 'stop_loss_price':stop_loss_price, 'get_profit_price':get_profit_price, 'note':note_text1})
 # 準備買入股票
-stockID_list = '2603 1477'.split(' ')
-note_text2 = ['B，小時線收破182買0.1，小時線收破183.5買0.3，日線收破183.5買0.2，剩下0.4等VCPB。',
-              'A，小時線收破393買0.1，小時線收破395.5買0.2，小時線收破400買0.1，日線收破395.5買0.1，日線收破400買0.3，剩下0.2等拉回買。']
+stockID_list = '2603_2 1477_2 3010_2 2327 2317_2'.split(' ')
+note_text2 = ['B，小時線收破183.5買0.3，日線收破183.5買0.2，剩下0.4等VCPB。',
+              'A，小時線收破400買0.1，日線收破395.5買0.1，日線收破400買0.3，剩下0.2等拉回買。',
+              'A，小時線收破131買0.1，日線收破131買0.2。',
+              'B，小時線收破625買0.1，日線收破625買0.2，小時線收破635買0.2，日線收破635買0.2，剩下0.3等拉回買。',
+              'A，日線收破158買0.3，小時線收破160.5買0.2，日線收破160.5買0.2。']
 # 買入點 
-buy_price_list = [182, 393]
+buy_price_list = [183.5, 395.5, 131, 625, 158]
 # 準備買入股票的停損點
-newstock_stop_loss = [172, 377]
+newstock_stop_loss = [173.5, 382, 119.5, 610, 149.5]
 # 準備買入股票 note
 
 df2 = pd.DataFrame({'stockID':stockID_list, 'buy_price':buy_price_list, 'stop_loss_price':newstock_stop_loss, 'note':note_text2})
