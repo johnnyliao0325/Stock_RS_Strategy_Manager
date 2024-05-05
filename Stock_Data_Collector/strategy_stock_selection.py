@@ -12,6 +12,7 @@ from email.header import Header
 import openpyxl
 import traceback
 import sys
+from tqdm import tqdm
 sys.path.append('C:/Users/User/Desktop/StockInfoHub')
 from Shared_Modules.shared_functions import *
 from Shared_Modules.shared_variables import *
@@ -25,47 +26,15 @@ class bcolors:
 #=============是否寄email============
 sentemailornot = True
 istest = False
+update_industry_excel = True
+excel_description = ''
 # ============上市股票df============
-url = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=1&issuetype=1&industry_code=&Page=1&chklike=Y"
-response = requests.get(url)
-listed = pd.read_html(response.text)[0]
-listed.columns = listed.iloc[0,:]
-listed = listed[["有價證券代號","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]]
-listed = listed.iloc[1:]
-
-# ============上櫃股票df============
-urlTWO = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=2&issuetype=&industry_code=&Page=1&chklike=Y"
-response = requests.get(urlTWO)
-listedTWO = pd.read_html(response.text)[0]
-listedTWO.columns = listedTWO.iloc[0,:]
-listedTWO = listedTWO.loc[listedTWO['有價證券別'] == '股票']
-listedTWO = listedTWO[["有價證券代號","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]]
-
-# ============上市股票代號+.TW============
-stock_1 = listed["有價證券代號"]
-stock_num = stock_1.apply(lambda x: str(x) + ".TW")
-stock_num.loc[len(stock_num)+1] = '0050.TW'
-stock_num.loc[len(stock_num)+1] = '^TWII'
-# print(stock_num)
-
-# ============上櫃股票代號+.TWO============
-stock_2 = listedTWO["有價證券代號"]
-stock_num2 = stock_2.apply(lambda x: str(x) + ".TWO")
-# print(stock_num2)
-
-# ============concate全部股票代號============
-stock_num = pd.concat([stock_num, stock_num2], ignore_index=True)
-# print(stock_num)
-allstock_info = pd.concat([listed, listedTWO], ignore_index=True)
-allstock_info.columns = ["ID","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]
-allstock_info.set_index('ID', inplace = True)
-print(allstock_info)
+stock_num, allstock_info = get_allstock_info()
 # print(type(allstock_info['ID'].values[0]))
-
+print(allstock_info)
 #============ 把要看日期的個股資料合併(一天)============
-# for i in tqdm(range(0,300,1), postfix='*******', ncols=150):
+# for i in tqdm(range(2000,0,-1), postfix='*******', ncols=150):
 for i in [0]:
-
 # ============改日期============
     # 今天日期往前推幾天(今日 - n_day_ago)
     n_day_ago = 0
@@ -73,9 +42,26 @@ for i in [0]:
         day = datetime.datetime.strptime(str(datetime.date.today() - datetime.timedelta(days=n_day_ago)) , '%Y-%m-%d' )
         if str(day).split(' ')[0] in HOLIDAY:
             line_notify(f'{day}放假不執行daily_rs_industry.py', TOKEN_FOR_UPDATE)
-            sys.exit()
+            continue
+            # sys.exit()
+        ## 假日不執行
+        if day.weekday() == 5 or day.weekday() == 6:
+            line_notify(f'{day}放假不執行daily_rs_industry.py', TOKEN_FOR_UPDATE)
+            continue
         print('day: ', day)
         line_notify(f'{day}開始執行daily_rs_industry.py', TOKEN_FOR_UPDATE)
+        yesterday_allstock_info = None
+        # ============讀取昨日選股============
+        for y_i in range(10):
+            try:
+                d = datetime.datetime.strptime(str(datetime.date.today() - datetime.timedelta(days=y_i+1+n_day_ago)), '%Y-%m-%d')
+                d = str(d).split(' ')[0]
+                yesterday_allstock_info = pd.read_excel(fr'C:\Users\User\Desktop\StockInfoHub\Stock_Data_Collector\全個股條件篩選\{d}選股.xlsx')
+                print(f'{bcolors.OK}yesterday_allstock_info {d} OK{bcolors.RESET}')
+                break
+            except:
+                continue
+
         ## ============第一個日期選出符合條件的股票並匯出excel============
         allstock = concat_stock(day, stock_num[2:])
         line_notify('concat_stock OK', TOKEN_FOR_UPDATE)
@@ -88,38 +74,41 @@ for i in [0]:
                 # pass
 
         # ============加入是否符合策略============
-        allstock = template(allstock,allstock_info)
+        allstock = template(allstock,allstock_info,yesterday_allstock_info)
         line_notify('template OK', TOKEN_FOR_UPDATE)
         # ID = allstock.index.values
         allstock.dropna(inplace=True)
-        print(allstock)
         T5_ID = allstock.loc[allstock['T5']].index.values.astype(str)
         T5_2_ID = allstock.loc[allstock['T5-2']].index.values.astype(str)
         T6_ID = allstock.loc[allstock['T6'], ['產業別', 'RS EMA250rate']].sort_values(by='RS EMA250rate', ascending=False).iloc[:50].index.values.astype(str)
         T11_ID = allstock.loc[allstock['T11']].index.values.astype(str)
+        T21_ID = allstock.loc[allstock['T21']].index.values.astype(str)
         TM_ID = allstock.loc[allstock['TM']].index.values.astype(str)
         
         T5_stock_num = len(T5_ID)
         T5_2_stock_num = len(T5_2_ID)
         T6_stock_num = len(T6_ID)
         T11_stock_num = len(T11_ID)
+        T21_stock_num = len(T21_ID)
         TM_stock_num = len(TM_ID)
-        all_template_ID = list(set(np.concatenate([T5_ID,T5_2_ID,T6_ID,T11_ID,TM_ID])))
-        all_template_ID_exTM = list(set(np.concatenate([T5_ID,T5_2_ID,T6_ID,T11_ID])))
+        all_template_ID = list(set(np.concatenate([T5_ID,T5_2_ID,T6_ID,T11_ID,TM_ID,T21_ID])))
+        all_template_ID_exTM = list(set(np.concatenate([T5_ID,T5_2_ID,T6_ID,T11_ID,T21_ID])))
         print('T5 股票數量 : ', T5_stock_num, end=' | ')
         print('T5-2 股票數量 : ', T5_2_stock_num, end=' | ')
         print('T6 股票數量 : ', T6_stock_num, end=' | ')
         print('T11 股票數量 : ', T11_stock_num, end=' | ')
+        print('T21 股票數量 : ', T21_stock_num, end=' | ')
         print('TM 股票數量 : ', TM_stock_num)
         print('除了TM以外的股票數量 : ', len(all_template_ID))
         print('全部股票數量 : ', len(all_template_ID_exTM))
         
         # ============防止用濾網篩選前50個的template混亂============
-        allstock[['T5','T5-2','T6','T11','TM']] = False
+        allstock[['T5','T5-2','T6','T11','TM','T21']] = False
         allstock.loc[T5_ID,'T5'] = True
         allstock.loc[T5_2_ID,'T5-2'] = True
         allstock.loc[T6_ID,'T6'] = True
         allstock.loc[T11_ID,'T11'] = True
+        allstock.loc[T21_ID,'T21'] = True
         allstock.loc[TM_ID,'TM'] = True
         allstock[['RS 250rate', 'RS 50rate', 'RS 20rate', 'RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']] = allstock[['RS 250rate', 'RS 50rate', 'RS 20rate', 'RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']].astype(float).round(1)
         allstock['Volume 50MA'] = (allstock['Volume 50MA']/1000).astype(int)
@@ -130,21 +119,24 @@ for i in [0]:
         print(f'{bcolors.OK}All Template Stocks... {bcolors.RESET}', end='')
 
         #============今日符合策略全部股票============
-        apexstock = allstock.loc[all_template_ID, ['Name', 'Adj Close', 'busness volume(億)', 'Volume 50MA', 'business volume 50MA(百萬)', '產業別'
+        get_column_name = ['Name', 'Adj Close', 'busness volume(億)', 'Volume 50MA', 'business volume 50MA(百萬)', '產業別'
                                             , 'RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate', 'RS 250rate', 'RS 50rate', 'RS 20rate'
-                                            , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50'
-                                            ,'RS 250EMA is 10MAX','RS 50EMA is 10MAX','RS 20EMA is 10MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM'
+                                            , '5MA', '10MA', '20MA', '50MA', '100MA', '150MA', '200MA', 'ROCP'
+                                            , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50', 'RS EMA20 diff', 'RS EMA20 20MAX diff'
+                                            ,'RS 250EMA is 10MAX','RS 50EMA is 10MAX','RS 20EMA is 10MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM', 'T21'
                                             , 'Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', '150MA>200MA','year high sort', 'year low sort'
-                                            , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']]
+                                            , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']
         
-        column_name = ['Name', 'Adj Close', 'busness volume(億)', 'Volume 50MA(張)', 'business volume 50MA(百萬)', '產業別'
+        rename_column_name = ['Name', 'Adj Close', 'busness volume(億)', 'Volume 50MA(張)', 'business volume 50MA(百萬)', '產業別'
                 , 'ES250rate', 'ES50rate', 'ES20rate', 'S250rate', 'S50rate', 'S20rate'
-                , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50'
-                ,'ES250 is 10D MAX','ES50 is 10D MAX','ES20 is 10D MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM'
+                , '5MA', '10MA', '20MA', '50MA', '100MA', '150MA', '200MA', 'ROCP'
+                , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50', 'RS EMA20 diff', 'RS EMA20 20MAX diff'
+                ,'ES250 is 10D MAX','ES50 is 10D MAX','ES20 is 10D MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM', 'T21'
                 , 'Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', '150MA>200MA','year high sort', 'year low sort'
                 , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']
-
-        apexstock.columns = column_name
+        
+        apexstock = allstock.loc[all_template_ID, get_column_name]
+        apexstock.columns = rename_column_name
         apexstock = apexstock.dropna()
         print(f'{bcolors.OK}OK{bcolors.RESET}')
         line_notify('all template stocks OK', TOKEN_FOR_UPDATE)
@@ -153,14 +145,8 @@ for i in [0]:
         print(f'{bcolors.OK}RS EMA250rate>80 Stocks... {bcolors.RESET}', end='')
 
         #============今日策略250ERS>80股票============
-        apexstock2 = allstock.loc[allstock['RS EMA250rate>80'], ['Name', 'Adj Close', 'busness volume(億)', 'Volume 50MA', 'business volume 50MA(百萬)', '產業別'
-                                            , 'RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate', 'RS 250rate', 'RS 50rate', 'RS 20rate'
-                                            , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50'
-                                            ,'RS 250EMA is 10MAX','RS 50EMA is 10MAX','RS 20EMA is 10MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM'
-                                            , 'Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', '150MA>200MA','year high sort', 'year low sort'
-                                            , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']]
-        # apexstock2[['RS 250rate', 'RS 50rate', 'RS 20rate','RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']] = apexstock2[['RS 250rate', 'RS 50rate', 'RS 20rate','RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']].astype(float).round(0)
-        apexstock2.columns = column_name
+        apexstock2 = allstock.loc[allstock['RS EMA250rate>80'], get_column_name]
+        apexstock2.columns = rename_column_name
         apexstock2 = apexstock2.dropna()
         print(f'{bcolors.OK}OK{bcolors.RESET}')
         line_notify('RS EMA 250rate>80 stocks OK', TOKEN_FOR_UPDATE)
@@ -170,14 +156,8 @@ for i in [0]:
 
         #============今日全部股票============
         sentstock = allstock.copy()
-        allstock = allstock.loc[:, ['Name', 'Adj Close', 'busness volume(億)', 'Volume 50MA', 'business volume 50MA(百萬)', '產業別'
-                                            , 'RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate', 'RS 250rate', 'RS 50rate', 'RS 20rate'
-                                            , 'ATR250/price', 'ATR50/price', 'ATR20/price', 'STD7', 'STD20', 'STD50'
-                                            ,'RS 250EMA is 10MAX','RS 50EMA is 10MAX','RS 20EMA is 10MAX', 'T5', 'T5-2', 'T6', 'T11', 'TM'
-                                            , 'Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', '150MA>200MA','year high sort', 'year low sort'
-                                            , '200MA trending up 60d', 'Volume 50MA>150k', 'Volume 50MA>250k']]
-        # allstock[['RS 250rate', 'RS 50rate', 'RS 20rate','RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']] = allstock[['RS 250rate', 'RS 50rate', 'RS 20rate','RS EMA250rate', 'RS EMA50rate', 'RS EMA20rate']].astype(float).round(0)
-        allstock.columns = column_name
+        allstock = allstock.loc[:, get_column_name]
+        allstock.columns = rename_column_name
         allstock = allstock.dropna()
         print(f'{bcolors.OK}OK{bcolors.RESET}')
         line_notify('all stocks OK', TOKEN_FOR_UPDATE)
@@ -186,74 +166,83 @@ for i in [0]:
         # print(len(apexstock.index))
 
         #============匯出全個股條件篩選excel============
-        sent_file_path = 'C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/全個股條件篩選/' + str(day).split(' ')[0] + '選股' + '.xlsx'
+        sent_file_path = 'C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/全個股條件篩選/' + str(day).split(' ')[0] + f'選股{excel_description}' + '.xlsx'
         allstock.to_excel(sent_file_path, encoding='utf-8-sig')
 
         #============匯出符合策略股票excel============
-        apexstock.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/250RS選股/' + str(day).split(' ')[0] + '250RS選股' + '.xlsx', encoding='utf-8-sig')
+        apexstock.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/250RS選股/' + str(day).split(' ')[0] + f'250RS選股{excel_description}' + '.xlsx', encoding='utf-8-sig')
 
         #============匯出250ERS>80股票excel============
-        apexstock2.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/250RS選股/' + str(day).split(' ')[0] + 'EMA250RS選股' + '.xlsx', encoding='utf-8-sig')
-        try:
-            rs_industry(day)
-        except:
-            line_notify('⚠️rs_industry FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('rs_industry OK', TOKEN_FOR_UPDATE)
-        try:
-            top_businessvolume_industry(day)
-        except:
-            line_notify('⚠️top_volume_industry FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('top_volume_industry OK', TOKEN_FOR_UPDATE)
-        try:
-            top_businessvolume_industry_with_weight(day)
-        except:
-            line_notify('⚠️top_volume_industry_with_weight FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('top_volume_industry_with_weight OK', TOKEN_FOR_UPDATE)
-        try:
-            rs_group(day)
-        except:
-            line_notify('⚠️rs_group FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('rs_group OK', TOKEN_FOR_UPDATE)
-        try:
-            top_businessvolume_group(day)
-        except:
-            line_notify('⚠️top_volume_group FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('top_volume_group OK', TOKEN_FOR_UPDATE)
-        try:
-            top_businessvolume_group_with_weight(day)
-        except:
-            line_notify('⚠️top_volume_group_with_weight FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('top_volume_group_with_weight OK', TOKEN_FOR_UPDATE)
-        try:
-            rs_concept(day)
-        except:
-            line_notify('⚠️rs_concept FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('rs_concept OK', TOKEN_FOR_UPDATE)
-        try:
-            top_businessvolume_concept(day)
-        except:
-            line_notify('⚠️top_volume_concept FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('top_volume_concept OK', TOKEN_FOR_UPDATE)
-        try:
-            top_businessvolume_concept_with_weight(day)
-        except:
-            line_notify('⚠️top_volume_concept_with_weight FAIL', TOKEN_FOR_UPDATE)
-            sys.exit()
-        line_notify('top_volume_concept_with_weight OK', TOKEN_FOR_UPDATE)
-        print(str(day))
+        apexstock2.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/250RS選股/' + str(day).split(' ')[0] + f'EMA250RS選股{excel_description}' + '.xlsx', encoding='utf-8-sig')
+        if update_industry_excel:
+            try:
+                rs_industry(day)
+            except:
+                line_notify('⚠️rs_industry FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('rs_industry OK', TOKEN_FOR_UPDATE)
+            try:
+                top_businessvolume_industry(day)
+            except:
+                line_notify('⚠️top_volume_industry FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('top_volume_industry OK', TOKEN_FOR_UPDATE)
+            try:
+                top_businessvolume_industry_with_weight(day)
+            except:
+                line_notify('⚠️top_volume_industry_with_weight FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('top_volume_industry_with_weight OK', TOKEN_FOR_UPDATE)
+            try:
+                rs_group(day)
+            except:
+                line_notify('⚠️rs_group FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('rs_group OK', TOKEN_FOR_UPDATE)
+            try:
+                top_businessvolume_group(day)
+            except:
+                line_notify('⚠️top_volume_group FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('top_volume_group OK', TOKEN_FOR_UPDATE)
+            try:
+                top_businessvolume_group_with_weight(day)
+            except:
+                line_notify('⚠️top_volume_group_with_weight FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('top_volume_group_with_weight OK', TOKEN_FOR_UPDATE)
+            try:
+                rs_concept(day)
+            except:
+                line_notify('⚠️rs_concept FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('rs_concept OK', TOKEN_FOR_UPDATE)
+            try:
+                top_businessvolume_concept(day)
+            except:
+                line_notify('⚠️top_volume_concept FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('top_volume_concept OK', TOKEN_FOR_UPDATE)
+            try:
+                top_businessvolume_concept_with_weight(day)
+            except:
+                line_notify('⚠️top_volume_concept_with_weight FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            line_notify('top_volume_concept_with_weight OK', TOKEN_FOR_UPDATE)
+            try:
+                strategy_stock_number(str(day).split(' ')[0])
+            except:
+                line_notify('⚠️strategy_stock_number FAIL', TOKEN_FOR_UPDATE)
+                sys.exit()
+            print(str(day))
+            
+            ## clean terminal
+            
         ###############################################################################################################################################################################
         ##                                                                                寄email                                                                                    ##
         ############################################################################################################################################################################### 
         
-        if sentemailornot == True:
+        if sentemailornot:
             ers_higher80 = sentstock.loc[sentstock['RS EMA250rate>80']]
             ers_higher80_length = len(ers_higher80.index)
             all_length = len(sentstock.index)
@@ -358,7 +347,7 @@ T6新增股票ID : \n{T6_add_ID}\n\nT11新增股票ID : \n{T11_add_ID}\n</pre>'
             
             # ============產業類股ERS>80增減最多============
             ERS100 = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_RS_rate_analysis/100產業分析/100產業RS排行.xlsx', header=0, index_col=0)
-            yesterdat = str(datetime.datetime.strptime(str(datetime.date.today() - datetime.timedelta(days=n_day_ago+delay_day)) , '%Y-%m-%d' ))
+            yesterday = str(datetime.datetime.strptime(str(datetime.date.today() - datetime.timedelta(days=n_day_ago+delay_day)) , '%Y-%m-%d' ))
             for i in range(20):
                 lastweek = str(datetime.datetime.strptime(str(datetime.date.today() - datetime.timedelta(days=n_day_ago+7+i)) , '%Y-%m-%d' ))
                 try:
@@ -368,7 +357,7 @@ T6新增股票ID : \n{T6_add_ID}\n\nT11新增股票ID : \n{T11_add_ID}\n</pre>'
                 except:
                     continue
             new_rs = ERS100.loc[str(day)]
-            old_rs = ERS100.loc[str(yesterdat)]
+            old_rs = ERS100.loc[str(yesterday)]
             lastweek_rs = ERS100.loc[str(lastweek)]
             add = new_rs - old_rs
             add.fillna(0, inplace=True)

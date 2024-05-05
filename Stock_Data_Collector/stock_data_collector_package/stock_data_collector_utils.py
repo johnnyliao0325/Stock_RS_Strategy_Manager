@@ -12,6 +12,47 @@ class bcolors:
     WARNING = '\033[93m' #YELLOW
     FAIL = '\033[91m' #RED
     RESET = '\033[0m' #RESET COLOR
+
+def get_tradingview_format():
+    # ============上市股票df============
+    url = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=1&issuetype=1&industry_code=&Page=1&chklike=Y"
+    response = requests.get(url, timeout=5)
+    print(response.status_code)
+    listed = pd.read_html(response.text)[0]
+    listed.columns = listed.iloc[0,:]
+    listed = listed[["有價證券代號","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]]
+    listed = listed.iloc[1:]
+
+    # ============上櫃股票df============
+    urlTWO = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=2&issuetype=&industry_code=&Page=1&chklike=Y"
+    response = requests.get(urlTWO, timeout=5)
+    print(response.status_code)
+    listedTWO = pd.read_html(response.text)[0]
+    listedTWO.columns = listedTWO.iloc[0,:]
+    listedTWO = listedTWO.loc[listedTWO['有價證券別'] == '股票']
+    listedTWO = listedTWO[["有價證券代號","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]]
+
+    # ============上市股票代號+.TW============
+    stock_1 = listed["有價證券代號"]
+    stock_num = stock_1.apply(lambda x: str(x) + ".TW")
+    stock_num.loc[len(stock_num)+1] = '0050.TW'
+    stock_num.loc[len(stock_num)+1] = '^TWII'
+    # print(stock_num)
+
+    # ============上櫃股票代號+.TWO============
+    stock_2 = listedTWO["有價證券代號"]
+    stock_num2 = stock_2.apply(lambda x: str(x) + ".TWO")
+    # print(stock_num2)
+
+    # ============concate全部股票代號============
+    stock_num = pd.concat([stock_num, stock_num2], ignore_index=True)
+    # print(stock_num)
+    allstock_info = pd.concat([listed, listedTWO], ignore_index=True)
+    allstock_info.columns = ["ID","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]
+    allstock_info.set_index('ID', inplace = True)
+    # print(allstock_info)
+    return allstock_info
+
 # =====================data.py=====================
 # 刪除資料函式
 def delete_data(stock_id, time = 0, dropindex = None):
@@ -338,6 +379,43 @@ def update_RS_MAX(stock_id):
         print(f'{bcolors.WARNING}RS MAX指標更新失敗, {stock_id} {bcolors.RESET} : {err}')
 
 # =====================daily rs indistry.py=====================
+# 上市櫃個股代號
+def get_allstock_info():
+    url = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=1&issuetype=1&industry_code=&Page=1&chklike=Y"
+    response = requests.get(url)
+    listed = pd.read_html(response.text)[0]
+    listed.columns = listed.iloc[0,:]
+    listed = listed[["有價證券代號","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]]
+    listed = listed.iloc[1:]
+
+    # ============上櫃股票df============
+    urlTWO = "https://isin.twse.com.tw/isin/class_main.jsp?owncode=&stockname=&isincode=&market=2&issuetype=&industry_code=&Page=1&chklike=Y"
+    response = requests.get(urlTWO)
+    listedTWO = pd.read_html(response.text)[0]
+    listedTWO.columns = listedTWO.iloc[0,:]
+    listedTWO = listedTWO.loc[listedTWO['有價證券別'] == '股票']
+    listedTWO = listedTWO[["有價證券代號","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]]
+
+    # ============上市股票代號+.TW============
+    stock_1 = listed["有價證券代號"]
+    stock_num = stock_1.apply(lambda x: str(x) + ".TW")
+    stock_num.loc[len(stock_num)+1] = '0050.TW'
+    stock_num.loc[len(stock_num)+1] = '^TWII'
+    # print(stock_num)
+
+    # ============上櫃股票代號+.TWO============
+    stock_2 = listedTWO["有價證券代號"]
+    stock_num2 = stock_2.apply(lambda x: str(x) + ".TWO")
+    # print(stock_num2)
+
+    # ============concate全部股票代號============
+    stock_num = pd.concat([stock_num, stock_num2], ignore_index=True)
+    # print(stock_num)
+    allstock_info = pd.concat([listed, listedTWO], ignore_index=True)
+    allstock_info.columns = ["ID","有價證券名稱","市場別","產業別","公開發行/上市(櫃)/發行日"]
+    allstock_info.set_index('ID', inplace = True)
+    return stock_num, allstock_info
+
 # 整合每日個股資料
 def concat_stock(day, stock_num):
     allstock = []
@@ -364,53 +442,38 @@ def concat_stock(day, stock_num):
             print(f'{bcolors.WARNING}{id} : {e}{bcolors.RESET}')
             fail_ID.append(id)
             pass
-    print(allstock)
-    print(allstock.columns)
-    allstock.drop(['RS MA250rate', 'RS MA50rate', 'RS MA20rate'], axis=1, inplace=True)
+    try:
+        allstock.drop(['RS MA250rate'], axis=1, inplace=True)
+    except: 
+        pass
+    try:
+        allstock.drop(['RS MA50rate'], axis=1, inplace=True)
+    except:
+        pass
+    try:
+        allstock.drop(['RS MA20rate'], axis=1, inplace=True)
+    except:
+        pass
     allstock.dropna(inplace=True)
     allstock['ID'] = allstock['ID'].astype(int).astype(str)
     allstock.set_index('ID', inplace = True)
     print(f'{bcolors.OK}DONE{bcolors.RESET}')
-    print(fail_ID)
 
     return allstock
 # 選股條件
-def template(allstock:pd.DataFrame, allstock_info:pd.DataFrame):
+def template(allstock:pd.DataFrame=None, allstock_info:pd.DataFrame=None, yesterday_allstock_info:pd.DataFrame=None):
     print(f'{bcolors.OK}Template Filter...{bcolors.RESET}')
+    if yesterday_allstock_info is not None:
+        yesterday_allstock_info.set_index('ID', inplace = True)
     for id in allstock.index.values:
         try:
-            # allstock.loc[id, 'Name'] = allstock_info.loc[str(id), '有價證券名稱']
-            # allstock.loc[id, 'Price>10MA'] = (allstock.loc[id, 'Adj Close']>allstock.loc[id, '10MA'])
-            # allstock.loc[id, 'Price>20MA'] = (allstock.loc[id, 'Adj Close']>allstock.loc[id, '20MA'])
-            # allstock.loc[id, 'Price>50MA'] = (allstock.loc[id, 'Adj Close']>allstock.loc[id, '50MA'])
-            # allstock.loc[id, 'Price>150MA'] = (allstock.loc[id, 'Adj Close']>allstock.loc[id, '150MA'])
-            # allstock.loc[id, 'Price>200MA'] = (allstock.loc[id, 'Adj Close']>allstock.loc[id, '200MA'])
-            # allstock.loc[id, '50MA>150MA'] = (allstock.loc[id, '50MA']>allstock.loc[id, '150MA'])
-            # allstock.loc[id, '50MA>200MA'] = (allstock.loc[id, '50MA']>allstock.loc[id, '200MA'])
-            # allstock.loc[id, '150MA>200MA'] = (allstock.loc[id, '150MA']>allstock.loc[id, '200MA'])
-            # allstock.loc[id, 'year high sort'] = (abs((allstock.loc[id, '250Max']-allstock.loc[id, 'Adj Close'])/allstock.loc[id, '250Max'])<0.25)
-            # allstock.loc[id, 'year low sort'] = ((allstock.loc[id, 'Adj Close']-allstock.loc[id, '250Min'])/allstock.loc[id, '250Min']>0.25)
-            # allstock.loc[id, '200MA trending up 60d'] = (allstock.loc[id, '200MA ROCP 60MA'] >0)
-            # allstock.loc[id, '200MA trending up 20d'] = (allstock.loc[id, '200MA ROCP 20MA'] >0)
-            # allstock.loc[id, 'RS 250rate>80'] = (allstock.loc[id, 'RS 250rate'] > 80)
-            # allstock.loc[id, 'RS 250rate<75'] = (allstock.loc[id, 'RS 250rate'] < 75)
-            # allstock.loc[id, 'RS 250rate>55'] = (allstock.loc[id, 'RS 250rate'] > 55)
-            # allstock.loc[id, 'RS 20rate>85'] = (allstock.loc[id, 'RS 20rate'] > 85)
-            # allstock.loc[id, 'RS EMA250rate>80'] = (allstock.loc[id, 'RS EMA250rate'] > 80)
-            # allstock.loc[id, 'RS EMA50rate>80'] = (allstock.loc[id, 'RS EMA50rate'] > 80)
-            # allstock.loc[id, 'RS EMA20rate>80'] = (allstock.loc[id, 'RS EMA20rate'] > 80)
-            # allstock.loc[id, 'RS EMA20rate>85'] = (allstock.loc[id, 'RS EMA20rate'] > 85)
-            # allstock.loc[id, 'Volume 50MA>100k'] = (allstock.loc[id, 'Volume 50MA'] > 100*1000)
-            # allstock.loc[id, 'ATR250/price'] = (allstock.loc[id, 'ATR250'] / allstock.loc[id, 'Adj Close'])
-            # allstock.loc[id, 'ATR50/price'] = (allstock.loc[id, 'ATR50'] / allstock.loc[id, 'Adj Close'])
-            # allstock.loc[id, 'ATR20/price'] = (allstock.loc[id, 'ATR20'] / allstock.loc[id, 'Adj Close'])
-            # allstock.loc[id, 'T1'] = all(allstock.loc[id, ['RS EMA250rate>80', 'RS EMA20rate>80', 'year high sort', 'year low sort', 'Volume 50MA>100k']])
-            # allstock.loc[id, 'T3'] = all(allstock.loc[id, ['RS EMA250rate>80', 'RS 250rate>55', 'RS 250rate<75', 'year high sort', 'year low sort', 'Volume 50MA>100k']])
-            # allstock.loc[id, 'T5'] = all(allstock.loc[id, ['RS 20rate>85', 'year high sort', 'year low sort', 'Volume 50MA>100k']])
-            # allstock.loc[id, 'TM'] = all(allstock.loc[id, ['Price>150MA', 'Price>200MA', '50MA>150MA', '50MA>200MA', 'year high sort', 'year low sort', '200MA trending up 60d', 'RS 250rate>80', 'Volume 50MA>100k']])
-            #TM
+            # stock info
             allstock.loc[id, 'Name'] = allstock_info.loc[str(id), '有價證券名稱']
             allstock.loc[id, 'business volume 50MA(百萬)'] = round(float(allstock.loc[id, 'Volume 50MA'])*float(allstock.loc[id, 'Adj Close'])/1000000, 3)
+            allstock.loc[id, 'busness volume(億)'] = (allstock.loc[id, 'Volume'] * allstock.loc[id, 'Adj Close'])/100000000
+            allstock.loc[id, 'year high sort'] = (abs((allstock.loc[id, '250Max']-allstock.loc[id, 'Adj Close'])/allstock.loc[id, '250Max'])<0.25)
+            allstock.loc[id, 'year low sort'] = ((allstock.loc[id, 'Adj Close']-allstock.loc[id, '250Min'])/allstock.loc[id, '250Min']>0.25)
+            # MA strategy
             allstock.loc[id, 'Price>20MA'] = (allstock.loc[id, 'Adj Close']>allstock.loc[id, '20MA'])
             allstock.loc[id, 'Price>50MA'] = (allstock.loc[id, 'Adj Close']>allstock.loc[id, '50MA'])
             allstock.loc[id, 'Price>150MA'] = (allstock.loc[id, 'Adj Close']>allstock.loc[id, '150MA'])
@@ -420,28 +483,47 @@ def template(allstock:pd.DataFrame, allstock_info:pd.DataFrame):
             allstock.loc[id, '50MA>150MA'] = (allstock.loc[id, '50MA']>allstock.loc[id, '150MA'])
             allstock.loc[id, '50MA>200MA'] = (allstock.loc[id, '50MA']>allstock.loc[id, '200MA'])
             allstock.loc[id, '150MA>200MA'] = (allstock.loc[id, '150MA']>allstock.loc[id, '200MA'])
-            # allstock.loc[id, '200MA trending up 20d'] = (allstock.loc[id, '200MA ROCP 20MA'] >0)
-            allstock.loc[id, 'year high sort'] = (abs((allstock.loc[id, '250Max']-allstock.loc[id, 'Adj Close'])/allstock.loc[id, '250Max'])<0.25)
-            allstock.loc[id, 'year low sort'] = ((allstock.loc[id, 'Adj Close']-allstock.loc[id, '250Min'])/allstock.loc[id, '250Min']>0.25)
-            #T5
-            allstock.loc[id, 'RS 20rate>85'] = (allstock.loc[id, 'RS 20rate'] > 85)
+            allstock.loc[id, 'price>95%50MA'] = ((allstock.loc[id, 'Adj Close']/allstock.loc[id, '50MA'])>0.95)
+            allstock.loc[id, 'price>110%50MA'] = ((allstock.loc[id, 'Adj Close']/allstock.loc[id, '50MA'])>1.1)
+            # volume strategy
+            allstock.loc[id, 'Volume 50MA>150k'] = (allstock.loc[id, 'Volume 50MA'] > 150*1000)
+            allstock.loc[id, 'Volume 50MA>250k'] = (allstock.loc[id, 'Volume 50MA'] > 250*1000)
+            allstock.loc[id, 'business volume 50MA(百萬)>200'] = (allstock.loc[id, 'business volume 50MA(百萬)'] > 200)
+            # 250 RS strategy
             allstock.loc[id, 'RS 250rate>55'] = (allstock.loc[id, 'RS 250rate'] > 55)
             allstock.loc[id, 'RS 250rate<75'] = (allstock.loc[id, 'RS 250rate'] < 75)
-            #T5-2
-            allstock.loc[id, 'RS EMA20rate>80'] = (allstock.loc[id, 'RS EMA20rate'] > 80)
+            # 250 ERS strategy
             allstock.loc[id, 'RS EMA250rate>60'] = (allstock.loc[id, 'RS EMA250rate'] > 60)
-            allstock.loc[id, 'RS EMA250rate<80'] = (allstock.loc[id, 'RS EMA250rate'] < 80)
-            allstock.loc[id, 'Volume 50MA>150k'] = (allstock.loc[id, 'Volume 50MA'] > 150*1000)
-            #, 'year low sort', 'year high sort'
-            #T6-
+            allstock.loc[id, 'RS EMA250rate>75'] = (allstock.loc[id, 'RS EMA250rate'] > 75)
             allstock.loc[id, 'RS EMA250rate>80'] = (allstock.loc[id, 'RS EMA250rate'] > 80)
+            allstock.loc[id, 'RS EMA250rate>85'] = (allstock.loc[id, 'RS EMA250rate'] > 85)
+            allstock.loc[id, 'RS EMA250rate<80'] = (allstock.loc[id, 'RS EMA250rate'] < 80)
+            # 20 RS strategy
+            allstock.loc[id, 'RS 20rate>85'] = (allstock.loc[id, 'RS 20rate'] > 85)
+            # 20 ERS strategy
+            allstock.loc[id, 'RS EMA20rate>50'] = (allstock.loc[id, 'RS EMA20rate'] > 50)
             allstock.loc[id, 'RS EMA20rate>80'] = (allstock.loc[id, 'RS EMA20rate'] > 80)
             allstock.loc[id, 'RS EMA20rate<99'] = (allstock.loc[id, 'RS EMA20rate'] < 99)
-            allstock.loc[id, 'Volume 50MA>250k'] = (allstock.loc[id, 'Volume 50MA'] > 250*1000)
-            #T11
-            allstock.loc[id, 'price>95%50MA'] = ((allstock.loc[id, 'Adj Close']/allstock.loc[id, '50MA'])>0.95)
-            allstock.loc[id, 'RS EMA250rate>75'] = (allstock.loc[id, 'RS EMA250rate'] > 75)
-            #,'RS 20EMA is 10MAX','RS EMA20rate<99','Volume 50MA>250k'
+            # RS diff strategy
+            try:
+                allstock.loc[id, 'RS EMA20 diff'] = (allstock.loc[id, 'RS EMA20rate'] - yesterday_allstock_info.loc[int(id), 'ES20rate'])
+                allstock.loc[id, 'RS EMA20diff < -5'] = (allstock.loc[id, 'RS EMA20 diff'] < -5)
+                allstock.loc[id, 'RS EMA20diff < -8'] = (allstock.loc[id, 'RS EMA20 diff'] < -8)
+                allstock.loc[id, 'RS EMA20diff < -11'] = (allstock.loc[id, 'RS EMA20 diff'] < -11)
+                allstock.loc[id, 'RS EMA20 20MAX diff'] = (allstock.loc[id, 'RS EMA20rate'] - allstock.loc[id, 'RS 20EMA 20MAX'])
+                allstock.loc[id, 'RS EMA20 20MAX diff < -5'] = (allstock.loc[id, 'RS EMA20 20MAX diff'] < -5)
+                allstock.loc[id, 'RS EMA20 20MAX diff < -10'] = (allstock.loc[id, 'RS EMA20 20MAX diff'] < -10)
+                allstock.loc[id, 'RS EMA20 20MAX diff < -20'] = (allstock.loc[id, 'RS EMA20 20MAX diff'] < -20)
+            except:
+                allstock.loc[id, 'RS EMA20 diff'] = 0
+                allstock.loc[id, 'RS EMA20diff < -5'] = False
+                allstock.loc[id, 'RS EMA20diff < -8'] = False
+                allstock.loc[id, 'RS EMA20diff < -11'] = False
+                allstock.loc[id, 'RS EMA20 20MAX diff'] = 0
+                allstock.loc[id, 'RS EMA20 20MAX diff < -5'] = False
+                allstock.loc[id, 'RS EMA20 20MAX diff < -10'] = False
+                allstock.loc[id, 'RS EMA20 20MAX diff < -20'] = False
+            # ATR strategy
             allstock.loc[id, 'ATR250/price'] = (allstock.loc[id, 'ATR250'] / allstock.loc[id, 'Adj Close'])
             allstock.loc[id, 'ATR50/price'] = (allstock.loc[id, 'ATR50'] / allstock.loc[id, 'Adj Close'])
             allstock.loc[id, 'ATR20/price'] = (allstock.loc[id, 'ATR20'] / allstock.loc[id, 'Adj Close'])
@@ -449,15 +531,16 @@ def template(allstock:pd.DataFrame, allstock_info:pd.DataFrame):
             allstock.loc[id, 'ATR250/price<0.5'] = (allstock.loc[id, 'ATR250/price'] < 0.15)
             allstock.loc[id, 'ATR50/price<0.03'] = (allstock.loc[id, 'ATR50/price'] < 0.03)
             allstock.loc[id, 'ATR20/price<0.03'] = (allstock.loc[id, 'ATR20/price'] < 0.03)  
-            allstock.loc[id, 'busness volume(億)'] = (allstock.loc[id, 'Volume'] * allstock.loc[id, 'Adj Close'])/100000000
             #All Template
             allstock.loc[id, 'T5'] = all(allstock.loc[id, ['RS 20rate>85', 'RS 250rate>55', 'RS 250rate<75', 'year low sort', 'year high sort', 'Volume 50MA>150k']])
             allstock.loc[id, 'T5-2'] = all(allstock.loc[id, ['RS EMA20rate>80', 'RS EMA250rate>60', 'RS EMA250rate<80', 'year low sort', 'year high sort', 'Volume 50MA>150k']])
             allstock.loc[id, 'T6'] = all(allstock.loc[id, ['RS EMA250rate>80', 'RS EMA20rate>80', 'Volume 50MA>250k']])
             allstock.loc[id, 'T11'] = all(allstock.loc[id, ['RS EMA250rate>75','RS 20EMA is 10MAX','Volume 50MA>250k','price>95%50MA']])
+            allstock.loc[id, 'T21'] = all(allstock.loc[id, ['RS EMA20rate>50', 'RS EMA250rate>85', 'RS EMA20 20MAX diff < -5', 'price>110%50MA', 'Volume 50MA>250k']])
+            #allstock.loc[id, 'T22'] = all(allstock.loc[id, ['RS EMA20rate>50', 'RS EMA250rate>85', 'RS EMA20 20MAX diff < -10', 'price>110%50MA', 'Volume 50MA>250k']])
+            #allstock.loc[id, 'T23'] = all(allstock.loc[id, ['RS EMA20rate>50', 'RS EMA250rate>85', 'RS EMA20 20MAX diff < -20', 'price>110%50MA', 'Volume 50MA>250k']])
             allstock.loc[id, 'TM'] = all(allstock.loc[id, ['Price>150MA', 'Price>200MA', 'year high sort', 'year low sort', '200MA trending up 60d', 'RS 250rate>80', 'Volume 50MA>150k']])
         except Exception as e:
-            pass
             print(f'{bcolors.WARNING}{id} : {e}{bcolors.RESET}')
             allstock.drop(id, inplace=True)
             # print(id, '失敗')
@@ -466,7 +549,7 @@ def template(allstock:pd.DataFrame, allstock_info:pd.DataFrame):
     return allstock
 
 # 更新每日產業rs資料
-def rs_industry(day):
+def rs_industry(day):# 
     # print(str(day).split(' ')[0])
     industry_df = pd.read_excel(r'C:\Users\User\Desktop\StockInfoHub\others\產業別.xlsx').astype(int).astype(str)
     stock_df = pd.read_excel(f'C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/全個股條件篩選/{str(day).split(" ")[0]}選股.xlsx')
@@ -848,6 +931,111 @@ def top_businessvolume_concept_with_weight(day):
     print(f'{bcolors.OK}top business volume industry... OK{bcolors.RESET}')
     # else:
     #     print(f'{bcolors.WARNING}{str(day)} already update rs industry{bcolors.RESET}')
+# 更新每日策略選股數量
+def strategy_stock_number(day):
+    folder_name = 'C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/全個股條件篩選'
+    file_names = day+'選股'
+    print(file_names)
+    industry_df = pd.read_excel(r'C:\Users\User\Desktop\StockInfoHub\others\產業別.xlsx').astype(int).astype(str)
+    group_df = pd.read_excel(r'C:\Users\User\Desktop\StockInfoHub\others\族群_複製.xlsx').astype(int).astype(str)
+    concept_df = pd.read_excel(r'C:\Users\User\Desktop\StockInfoHub\others\概念股_複製.xlsx').astype(int).astype(str)
+    TAIEX_df = pd.read_csv(r'C:\Users\User\Desktop\StockInfoHub\Stock_Data_Collector\history_data\^TWII.csv')
+
+    daily_template_industry_file = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股產業數量.xlsx')
+    daily_template_group_file = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股族群數量.xlsx')
+    daily_template_concept_file = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股概念股數量.xlsx')
+    daily_template_df_file = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股數量.xlsx')
+
+
+    all_industry_names = industry_df.columns.tolist()
+    all_industry_names = np.concatenate([all_industry_names, group_df.columns.tolist()])
+    all_industry_names = np.concatenate([all_industry_names, concept_df.columns.tolist()])
+    all_industry_names = np.unique(all_industry_names).tolist()
+    templates = ['T5', 'T5-2', 'T6', 'T11', 'T21', 'CF']
+
+    daily_template_industry = pd.DataFrame(np.zeros((len(file_names), len(templates)+1)), columns=['Date'] + templates)
+    daily_template_group = pd.DataFrame(np.zeros((len(file_names), len(templates)+1)), columns=['Date'] + templates)
+    daily_template_concept = pd.DataFrame(np.zeros((len(file_names), len(templates)+1)), columns=['Date'] + templates)
+    daily_template_df = pd.DataFrame(np.zeros((len(file_names), len(templates)+3)), columns=['Date'] + templates + ['TAIEX', 'TAIEX change %'])
+    for i, file in enumerate([file_names]):
+        file_path = folder_name + '/' + file + '.xlsx'
+        df = pd.read_excel(file_path)
+        ids = df['ID'].astype(str)
+        if 'ID' in df.columns:
+            df['ID'] = df['ID'].astype(str)
+            df.set_index('ID', inplace = True)
+            print(f'{bcolors.OK} {file} {bcolors.RESET} is loaded.')
+        else:
+            print(f'{bcolors.FAIL} {file} {bcolors.RESET} is not loaded.')
+            continue
+        try:
+            a = allstock_info
+        except NameError:
+            allstock_info = get_tradingview_format()
+        else:
+            pass
+        #看個股產業
+        alist = []
+        industry_category_df = []
+        show = True
+        df = df.sort_values(by='busness volume(億)', ascending=False)
+        df['CF'] = [True if index_value < 50 else False for index_value, x in enumerate(df.index.values)]
+        date = file.replace('選股', '')
+        daily_template_industry.iloc[i, 0] = date
+        daily_template_group.iloc[i, 0] = date
+        daily_template_concept.iloc[i, 0] = date
+        daily_template_df.iloc[i, 0] = date
+        daily_template_df.loc[i, 'TAIEX'] = TAIEX_df[TAIEX_df['Date'] == date]['Close'].values[0]
+        daily_template_df.loc[i, 'TAIEX change %'] = TAIEX_df[TAIEX_df['Date'] == date]['ROCP'].values[0]
+        for template_index, template in enumerate(templates):
+            to_watch = df[df[template] == True].index.values
+            all_stock_industry = []
+            all_stock_group = []
+            all_stock_concept = []
+            daily_template_df.loc[i, f'{template}'] = len(to_watch)
+            for id in to_watch:
+                stock_industry = []
+                stock_group = []
+                stock_concept = []
+                for col in industry_df.columns.values:
+                    if id in industry_df[col].values:
+                        stock_industry.append(col)
+                for col in group_df.columns.values:
+                    if id in group_df[col].values:
+                        stock_group.append(col)
+                for col in concept_df.columns.values:
+                    if id in concept_df[col].values:
+                        stock_concept.append(col)
+                stock_industry = np.unique(stock_industry).tolist()
+                stock_group = np.unique(stock_group).tolist()
+                stock_concept = np.unique(stock_concept).tolist()
+                all_stock_industry += stock_industry
+                all_stock_group += stock_group
+                all_stock_concept += stock_concept
+            def count_industry(all_stock_industry):
+                count_of_industry = pd.DataFrame(all_stock_industry, columns=['industry'])
+                count_of_industry['count'] = 1
+                count_of_industry = count_of_industry.groupby('industry').sum()
+                count_of_industry = count_of_industry.sort_values(by='count', ascending=False)
+                count_of_industry = count_of_industry.iloc[:3]
+                text = ''
+                for index in count_of_industry.index.values:
+                    text += f"{str(index)}({count_of_industry.loc[index, 'count'].astype(str)}) / "
+                
+                return text
+            daily_template_industry.iloc[i, template_index+1] = count_industry(all_stock_industry)
+            daily_template_group.iloc[i, template_index+1] = count_industry(all_stock_group)
+            daily_template_concept.iloc[i, template_index+1] = count_industry(all_stock_concept)
+
+    daily_template_concept_file = pd.concat([daily_template_concept_file, daily_template_concept], ignore_index=True)
+    daily_template_group_file = pd.concat([daily_template_group_file, daily_template_group], ignore_index=True)
+    daily_template_industry_file = pd.concat([daily_template_industry_file, daily_template_industry], ignore_index=True)
+    daily_template_df_file = pd.concat([daily_template_df_file, daily_template_df], ignore_index=True)    
+
+    daily_template_industry_file.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股產業數量.xlsx', index=False)
+    daily_template_group_file.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股族群數量.xlsx', index=False)
+    daily_template_concept_file.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股概念股數量.xlsx', index=False)
+    daily_template_df_file.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股數量.xlsx', index=False)
 
 
 # 更新每日策略選到股票差異
