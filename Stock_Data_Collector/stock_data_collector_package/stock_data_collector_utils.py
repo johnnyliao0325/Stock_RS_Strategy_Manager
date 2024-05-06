@@ -183,6 +183,12 @@ def indicator(stock_id, allstock_info, stock_num):
             df_new['STD7'] = 100*talib.STDDEV(df_new["Adj Close"], timeperiod=7)/talib.EMA(df_new["Adj Close"], 7)
             df_new['STD20'] = 100*talib.STDDEV(df_new["Adj Close"], timeperiod=20)/talib.EMA(df_new["Adj Close"], 20)
             df_new['STD50'] = 100*talib.STDDEV(df_new["Adj Close"], timeperiod=50)/talib.EMA(df_new["Adj Close"], 50)
+            # MACD
+            df_new['MACD'], df_new['MACDsignal'], df_new['MACDhist'] = talib.MACD(df_new["Adj Close"], fastperiod=12, slowperiod=26, signalperiod=9)
+            # RSI
+            df_new['RSI'] = talib.RSI(df_new["Adj Close"], timeperiod=14)
+            # KD
+            df_new['slowk'], df_new['slowd'] = talib.STOCH(high=df_new['High'], low=df_new["Low"], close=df_new["Adj Close"], fastk_period=9, slowk_period=3, slowk_matype=0, slowd_period=3, slowd_matype=0)
             stockindex = df_new.index.values
             index = []
             for i in stockindex:
@@ -434,7 +440,7 @@ def concat_stock(day, stock_num):
                 first = 0
                 print(allstock)
             else:
-                if len(stockdata.columns) != 96:
+                if len(stockdata.columns) != 102:
                     print(f'{bcolors.WARNING}{id} : columns not match{bcolors.RESET}')
                     print(id)
                     fail_ID.append(id)
