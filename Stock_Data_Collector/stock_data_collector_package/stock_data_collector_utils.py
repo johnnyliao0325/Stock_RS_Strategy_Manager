@@ -168,6 +168,9 @@ def indicator(stock_id, allstock_info, stock_num):
             df_new['250Max'] = talib.MAX(df_new['High'], 250)
             df_new['5Min'] = talib.MIN(df_new['Low'], 5)
             df_new['250Min'] = talib.MIN(df_new['Low'], 250)
+            df_new['Volume 5MA'] = talib.SMA(df_new['Volume'], 5)
+            df_new['Volume 10MA'] = talib.SMA(df_new['Volume'], 10)
+            df_new['Volume 20MA'] = talib.SMA(df_new['Volume'], 20)
             df_new['Volume 50MA'] = talib.SMA(df_new['Volume'], 50)
             # 漲幅
             df_new['ROCP'] = np.array(map(lambda x : round(x*100,2), talib.ROCP(df_new["Adj Close"], timeperiod=1)))
@@ -431,7 +434,7 @@ def concat_stock(day, stock_num):
                 first = 0
                 print(allstock)
             else:
-                if len(stockdata.columns) != 93:
+                if len(stockdata.columns) != 96:
                     print(f'{bcolors.WARNING}{id} : columns not match{bcolors.RESET}')
                     print(id)
                     fail_ID.append(id)
@@ -933,18 +936,19 @@ def top_businessvolume_concept_with_weight(day):
     #     print(f'{bcolors.WARNING}{str(day)} already update rs industry{bcolors.RESET}')
 # 更新每日策略選股數量
 def strategy_stock_number(day):
+    save_folder = 'C:/Users/User/Desktop/StockInfoHub/Stock_RS_rate_analysis/100產業分析'
     folder_name = 'C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/全個股條件篩選'
-    file_names = day+'選股'
+    file_names = [day+'選股']
     print(file_names)
     industry_df = pd.read_excel(r'C:\Users\User\Desktop\StockInfoHub\others\產業別.xlsx').astype(int).astype(str)
     group_df = pd.read_excel(r'C:\Users\User\Desktop\StockInfoHub\others\族群_複製.xlsx').astype(int).astype(str)
     concept_df = pd.read_excel(r'C:\Users\User\Desktop\StockInfoHub\others\概念股_複製.xlsx').astype(int).astype(str)
     TAIEX_df = pd.read_csv(r'C:\Users\User\Desktop\StockInfoHub\Stock_Data_Collector\history_data\^TWII.csv')
 
-    daily_template_industry_file = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股產業數量.xlsx')
-    daily_template_group_file = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股族群數量.xlsx')
-    daily_template_concept_file = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股概念股數量.xlsx')
-    daily_template_df_file = pd.read_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股數量.xlsx')
+    daily_template_industry_file = pd.read_excel(f'{save_folder}/每日策略選股產業數量.xlsx')
+    daily_template_group_file = pd.read_excel(f'{save_folder}/每日策略選股族群數量.xlsx')
+    daily_template_concept_file = pd.read_excel(f'{save_folder}/每日策略選股概念股數量.xlsx')
+    daily_template_df_file = pd.read_excel(f'{save_folder}/每日策略選股數量.xlsx')
 
 
     all_industry_names = industry_df.columns.tolist()
@@ -957,7 +961,7 @@ def strategy_stock_number(day):
     daily_template_group = pd.DataFrame(np.zeros((len(file_names), len(templates)+1)), columns=['Date'] + templates)
     daily_template_concept = pd.DataFrame(np.zeros((len(file_names), len(templates)+1)), columns=['Date'] + templates)
     daily_template_df = pd.DataFrame(np.zeros((len(file_names), len(templates)+3)), columns=['Date'] + templates + ['TAIEX', 'TAIEX change %'])
-    for i, file in enumerate([file_names]):
+    for i, file in enumerate(file_names):
         file_path = folder_name + '/' + file + '.xlsx'
         df = pd.read_excel(file_path)
         ids = df['ID'].astype(str)
@@ -1027,15 +1031,15 @@ def strategy_stock_number(day):
             daily_template_group.iloc[i, template_index+1] = count_industry(all_stock_group)
             daily_template_concept.iloc[i, template_index+1] = count_industry(all_stock_concept)
 
-    daily_template_concept_file = pd.concat([daily_template_concept_file, daily_template_concept], ignore_index=True)
-    daily_template_group_file = pd.concat([daily_template_group_file, daily_template_group], ignore_index=True)
-    daily_template_industry_file = pd.concat([daily_template_industry_file, daily_template_industry], ignore_index=True)
-    daily_template_df_file = pd.concat([daily_template_df_file, daily_template_df], ignore_index=True)    
+    daily_template_concept_file = pd.concat([daily_template_concept, daily_template_concept_file], ignore_index=True)
+    daily_template_group_file = pd.concat([daily_template_group, daily_template_group_file], ignore_index=True)
+    daily_template_industry_file = pd.concat([daily_template_industry, daily_template_industry_file], ignore_index=True)
+    daily_template_df_file = pd.concat([daily_template_df, daily_template_df_file], ignore_index=True)    
 
-    daily_template_industry_file.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股產業數量.xlsx', index=False)
-    daily_template_group_file.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股族群數量.xlsx', index=False)
-    daily_template_concept_file.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股概念股數量.xlsx', index=False)
-    daily_template_df_file.to_excel('C:/Users/User/Desktop/StockInfoHub/Stock_Data_Collector/每日策略選股數量.xlsx', index=False)
+    daily_template_industry_file.to_excel(f'{save_folder}/每日策略選股產業數量.xlsx', index=False)
+    daily_template_group_file.to_excel(f'{save_folder}/每日策略選股族群數量.xlsx', index=False)
+    daily_template_concept_file.to_excel(f'{save_folder}/每日策略選股概念股數量.xlsx', index=False)
+    daily_template_df_file.to_excel(f'{save_folder}/每日策略選股數量.xlsx', index=False)
 
 
 # 更新每日策略選到股票差異
