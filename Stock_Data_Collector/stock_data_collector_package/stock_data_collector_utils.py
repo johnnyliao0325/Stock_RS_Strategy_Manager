@@ -172,6 +172,9 @@ def indicator(stock_id, allstock_info, stock_num):
             df_new['Volume 10MA'] = talib.SMA(df_new['Volume'], 10)
             df_new['Volume 20MA'] = talib.SMA(df_new['Volume'], 20)
             df_new['Volume 50MA'] = talib.SMA(df_new['Volume'], 50)
+            df_new['Volume 10 Max'] = talib.MAX(df_new['Volume'], 10)
+            df_new['Volume 20 Max'] = talib.MAX(df_new['Volume'], 20)
+            df_new['Volume 50 Max'] = talib.MAX(df_new['Volume'], 50)
             # 漲幅
             df_new['ROCP'] = np.array(map(lambda x : round(x*100,2), talib.ROCP(df_new["Adj Close"], timeperiod=1)))
             df_new['OBV'] = talib.OBV(df_new["Adj Close"], df_new["Volume"])
@@ -440,7 +443,7 @@ def concat_stock(day, stock_num):
                 first = 0
                 print(allstock)
             else:
-                if len(stockdata.columns) != 102:
+                if len(stockdata.columns) != 105:
                     print(f'{bcolors.WARNING}{id} : columns not match{bcolors.RESET}')
                     print(id)
                     fail_ID.append(id)
