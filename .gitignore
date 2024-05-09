@@ -2,4 +2,4 @@
 *.csv
 *.png
 ## Ignore txt files in \Stock_Data_Collector\tradingview
-Stock_Data_Collector/tradingview/*.txt
+Stock_Data_Collector/tradingview觀察清單/*.txt
